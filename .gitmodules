@@ -1,0 +1,7 @@
+[submodule "DESDEO"]
+	path = DESDEO
+	url = https://github.com/industrial-optimization-group/DESDEO
+	branch = desdeo2
+[submodule "metsi"]
+	path = metsi
+	url = https://github.com/lukefi/metsi
