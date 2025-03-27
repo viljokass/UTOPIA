@@ -774,4 +774,10 @@ if __name__ == "__main__":
         with Path(f"{target_dir}/{name}/carbon.json").open(mode="w") as file:
             json.dump(carbons, file)
 
-    # TODO Put all this throught DESDEO's Utopia mylly and then put that into the database        
+    # TODO Put all this throught DESDEO's Utopia mylly and then put that into the database (JSON for now)
+    from utopia_problem import utopia_problem
+    problem, key = utopia_problem(f"{target_dir}/{name}")
+    with Path(f"{target_dir}/{name}/problem.json").open(mode="w") as file:
+        json.dump(problem.model_dump(mode="json"), file)
+    with Path(f"{target_dir}/{name}/key.json").open(mode="w") as file:
+        json.dump(key, file)
