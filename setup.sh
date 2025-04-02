@@ -25,9 +25,7 @@ git restore .
 cd .. #UTOPIA
 
 # Install rest of the required packages for the data pipeline
-cd pipeline #UTOPIA/pipeline
 pip install requests
 
-# I guess things oughta be done?
-cd .. #UTOPIA
-echo Done.
+echo
+echo Setup has finished. Just activate the virtual environment "UTOPIA-venv" to use the installation.
