@@ -70,6 +70,12 @@ from xml.etree import ElementTree as ET
 from convert_to_opt import convert_to_opt
 from write_trees_json import write_trees_json
 from write_carbon_json import write_carbon_json
+from utopia_problem import utopia_problem
+
+from desdeo.api import db_models
+from desdeo.api.db import SessionLocal
+from desdeo.api.routers.UserAuth import get_password_hash
+from desdeo.api.schema import Methods, ObjectiveKind, ProblemKind, Solvers, UserPrivileges, UserRole
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -308,7 +314,9 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
         list[str]: list of the removed stands' IDs.
     """
     # loop through the different parts of the real estate
-    # TODO: Fix, breaks if coordinate list is empty since we return "removed_ids" which we create inside the 'for'-loop
+    if len(coordinates) == 0:
+        raise PipelineError("There are no coordinates to use to get XML data! Are you sure the real estate ID is correct?")
+    
     for i in range(len(coordinates)):
         # read the XML into an ElementTree
         tree = ET.parse(f"{realestate_dir}/output_{i+1}.xml")
@@ -527,9 +535,25 @@ def combine_xmls(realestate_dir: str, coordinates: list):
                     content = file2.read()
                 file.write(content)
 
-        
-
-
+def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, extension: str) -> dict:
+    descriptions = {}
+    if holding:
+        for feat in mapjson["features"]:
+            if False:  # noqa: SIM108
+                ext = f".{feat["properties"][extension]}"
+            else:
+                ext = ""
+            descriptions[feat["properties"][sid]] = (
+                f"Ala {feat["properties"][holding].split("-")[-1]} kuvio {feat["properties"][stand]}{ext}: "
+            )
+    else:
+        for feat in mapjson["features"]:
+            if False:  # noqa: SIM108
+                ext = f".{feat["properties"][extension]}"
+            else:
+                ext = ""
+            descriptions[feat["properties"][sid]] = f"Kuvio {feat["properties"][stand]}{ext}: "
+    return descriptions
 
 if __name__ == "__main__":
     # Initialize the arguments expected to be given
@@ -774,10 +798,75 @@ if __name__ == "__main__":
         with Path(f"{target_dir}/{name}/carbon.json").open(mode="w") as file:
             json.dump(carbons, file)
 
-    # TODO Put all this throught DESDEO's Utopia mylly and then put that into the database (JSON for now)
-    from utopia_problem import utopia_problem
-    problem, key = utopia_problem(f"{target_dir}/{name}")
-    with Path(f"{target_dir}/{name}/problem.json").open(mode="w") as file:
-        json.dump(problem.model_dump(mode="json"), file)
-    with Path(f"{target_dir}/{name}/key.json").open(mode="w") as file:
-        json.dump(key, file)
+    # Handle the database stuff
+    
+    # Initiate database connection
+    database = SessionLocal()
+
+    # Create a user. This user is used in logging in to the web ui.
+    # TODO: If user already exists, do something else.
+    user = db_models.User(
+        username=f"{name}",
+        password_hash=get_password_hash("kissa123"),
+        role=UserRole.DM,
+        privilages=[],
+        user_group="",
+    )
+    database.add(user)
+    database.commit()
+    database.refresh(user)
+    
+    # Create the utopia problem.
+    problem_name = f"Utopia-problem: {", ".join(ids)}"
+    print("Creating the MOO problem...")
+    problem, key = utopia_problem(
+        data_dir=f"{target_dir}/{name}",
+        problem_name=problem_name
+    )
+    
+    # Put the problem into the database
+    problem_in_db = db_models.Problem(
+        owner=user.id,
+        name=problem_name,
+        kind=ProblemKind.CONTINUOUS,
+        obj_kind=ObjectiveKind.ANALYTICAL,
+        solver=Solvers.GUROBIPY,
+        presumed_ideal=problem.get_ideal_point(),
+        presumed_nadir=problem.get_nadir_point(),
+        value=problem.model_dump(mode="json"),
+    )
+    database.add(problem_in_db)
+    database.commit()
+    database.refresh(problem_in_db)
+
+    # Fetch the geojson file
+    with Path(f"{target_dir}/{name}/{name}.geojson").open(mode="r") as mapjson:
+        forest_map = mapjson.read()
+        
+    # Put necessary utopia information to the database also
+    map_info = db_models.Utopia(
+        problem=problem_in_db.id,
+        map_json=forest_map,
+        schedule_dict=key,
+        years=[5,10,20],
+        stand_id_field="id",
+        stand_descriptor=_generate_descriptions(
+            json.loads(forest_map),
+            "id",
+            "number",
+            "estate_code",
+            "extension"
+        )
+    )
+    database.add(map_info)
+    
+    # Update user access of the problem
+    problem_access = db_models.UserProblemAccess(
+        user_id=user.id,
+        problem_access=problem_in_db.id,
+    )
+    database.add(problem_access)
+    database.commit()
+    # All done, close the database connection.
+    database.close()
+
