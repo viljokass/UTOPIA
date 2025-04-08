@@ -10,15 +10,17 @@ DESDEO is used to handle the multi-objective optimization aspect of this system.
 
 Metsi is used to simulate the data for the multiobjective optimization problem based on the data produced their data pipeline code.
 
-The data pipeline code takes care of fetching the data from Natural Resources Institution and Forest Center the simulator and running DESDEO and metsi.
+The data pipeline code takes care of fetching the data from Natural Resources Institution and Forest Center the simulator and running DESDEO and metsi. We include a few altered metsi files as a patch so that some of our scripts work.
 
 Since metsi is run through subprocess, this folder needs to have "control.yaml" control file and "data" data folder for metsi's proper operation.
 
 ## Setup
-Running setup.sh should take care of setting up the system. For details on setup.sh, see setup.sh.
+Running setup.sh should take care of setting up the system for the most part.
+
+For initializing the database however, as of now, the user must set up the database manually. Depending on the authentication of your database, set the correct environment variables for operation. Those can be found from DESDEO/desdeo/api/config.py
 
 ## Operation
-Activate the UTOPIA-venv and run python pipeline/data_pipeline.py (follow its instructions)
+Activate the UTOPIA-venv and run python pipeline/data_pipeline.py (follow its instructions) The system collects data from Maanmittauslaitos and Metsäkeskus. Then the system simulates alternative forestry operations. Then the system creates a multiobjective optimization problem based on this data, and writes it into a database.
 
 ## TODO
-Also, it should be made so that the system produces a MOO-problem when given a real estate ID and puts that to the database (Currently writes JSON files of the problems)
+Currently, if a user already exists in the database, system crashes. Make it so that it doesn't happen "some sort of check or something"
