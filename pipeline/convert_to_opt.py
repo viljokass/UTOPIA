@@ -233,8 +233,8 @@ def convert_to_opt(data_dir: str, usernum: int):
 	#   - 37-40 are spruce volumes from years 0, 5, 10 and 20
 	#   - 41- are other tree's volumes from years 0, 5, 10 and 20
 
-	# Multiply columns 7 to 184 with the area column. 
-	df = df.with_columns((pl.nth(range(7,184)) * pl.nth(1))) 
+	# Multiply columns 2 to 184 with the area column. (that is every value that's not the area of the stand and the stand identifier)
+	df = df.with_columns((pl.nth(range(2,184)) * pl.nth(1))) 
 	
 	# Name the columns
 	df = df.rename(lambda column_name: data_names[int(column_name.split("_")[1])-1])

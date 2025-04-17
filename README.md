@@ -21,4 +21,4 @@ Running setup.sh should take care of setting up the system. For details on setup
 Activate the UTOPIA-venv and run python pipeline/data_pipeline.py (follow its instructions)
 
 ## TODO
-Also, it should be made so that the system produces a MOO-problem when given a real estate ID and puts that to the database (Currently writes JSON files of the problems)
+Figure out what to do with the very newest version of Metsi (biggest change, I believe, is control.yaml -> control.py)

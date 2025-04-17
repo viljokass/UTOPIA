@@ -74,8 +74,8 @@ from utopia_problem import utopia_problem
 
 from desdeo.api import db_models
 from desdeo.api.db import SessionLocal
-from desdeo.api.routers.UserAuth import get_password_hash
-from desdeo.api.schema import Methods, ObjectiveKind, ProblemKind, Solvers, UserPrivileges, UserRole
+from desdeo.api.routers.UserAuth import get_password_hash, get_user
+from desdeo.api.schema import ObjectiveKind, ProblemKind, Solvers, UserRole
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -84,23 +84,23 @@ import shapely.geometry as geom
 
 # the namespace used in metsi
 NS = {
-        "schema_location": "http://standardit.tapio.fi/schemas/forestData ForestData.xsd",
-        "xsi": "http://www.w3.org/2001/XMLSchema-instance",
-        "xlink": "http://www.w3.org/1999/xlink",
-        "gml": "http://www.opengis.net/gml",
-        "gdt": "http://standardit.tapio.fi/schemas/forestData/common/geometricDataTypes",
-        "co": "http://standardit.tapio.fi/schemas/forestData/common",
-        "sf": "http://standardit.tapio.fi/schemas/forestData/specialFeature",
-        "op": "http://standardit.tapio.fi/schemas/forestData/operation",
-        "dts": "http://standardit.tapio.fi/schemas/forestData/deadTreeStrata",
-        "tss": "http://standardit.tapio.fi/schemas/forestData/treeStandSummary",
-        "tst": "http://standardit.tapio.fi/schemas/forestData/treeStratum",
-        "ts": "http://standardit.tapio.fi/schemas/forestData/treeStand",
-        "st": "http://standardit.tapio.fi/schemas/forestData/Stand",
-        "ci": "http://standardit.tapio.fi/schemas/forestData/contactInformation",
-        "re": "http://standardit.tapio.fi/schemas/forestData/realEstate",
-        "default": "http://standardit.tapio.fi/schemas/forestData"
-    }
+    "schema_location": "http://standardit.tapio.fi/schemas/forestData ForestData.xsd",
+    "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+    "xlink": "http://www.w3.org/1999/xlink",
+    "gml": "http://www.opengis.net/gml",
+    "gdt": "http://standardit.tapio.fi/schemas/forestData/common/geometricDataTypes",
+    "co": "http://standardit.tapio.fi/schemas/forestData/common",
+    "sf": "http://standardit.tapio.fi/schemas/forestData/specialFeature",
+    "op": "http://standardit.tapio.fi/schemas/forestData/operation",
+    "dts": "http://standardit.tapio.fi/schemas/forestData/deadTreeStrata",
+    "tss": "http://standardit.tapio.fi/schemas/forestData/treeStandSummary",
+    "tst": "http://standardit.tapio.fi/schemas/forestData/treeStratum",
+    "ts": "http://standardit.tapio.fi/schemas/forestData/treeStand",
+    "st": "http://standardit.tapio.fi/schemas/forestData/Stand",
+    "ci": "http://standardit.tapio.fi/schemas/forestData/contactInformation",
+    "re": "http://standardit.tapio.fi/schemas/forestData/realEstate",
+    "default": "http://standardit.tapio.fi/schemas/forestData"
+}
 
 
 class PipelineError(Exception):
@@ -150,7 +150,7 @@ def coordinates_to_polygon(coordinate_pairs: list) -> str:
     polygon = "POLYGON (("
     for pair in coordinate_pairs:
         polygon = polygon + str(pair[0]) + " " + str(pair[1]) + ", "
-    return polygon[:-2] + "))" # replace the last ", " with "))"
+    return polygon[:-2] + "))"  # replace the last ", " with "))"
 
 
 def get_real_estate_coordinates(realestateid: str, api_key: str) -> list:
@@ -164,7 +164,7 @@ def get_real_estate_coordinates(realestateid: str, api_key: str) -> list:
         list: A list of the coordinates from Maanmittauslaitos for the given real estate ID.
     """
     r = requests.get(f"https://avoin-paikkatieto.maanmittauslaitos.fi/kiinteisto-avoin/simple-features/v3/collections/PalstanSijaintitiedot/items?kiinteistotunnus={realestateid}",
-                 params={"api-key": api_key, "crs": "http://www.opengis.net/def/crs/EPSG/0/3067"})
+                     params={"api-key": api_key, "crs": "http://www.opengis.net/def/crs/EPSG/0/3067"})
 
     # get the data into a dict
     estate_data = json.loads(r.content)
@@ -205,20 +205,23 @@ def write_real_estate_xmls(coordinates: list, realestateid: str, realestate_dir:
         polygon = coordinates_to_polygon(coordinates[i])
 
         # call Metsäkeskus API to get the forest data for the polygon
-        req = requests.post("https://avoin.metsakeskus.fi/rest/mvrest/FRStandData/v1/ByPolygon", data={"wktPolygon": polygon, "stdVersion": "MV1.9"})
+        req = requests.post("https://avoin.metsakeskus.fi/rest/mvrest/FRStandData/v1/ByPolygon",
+                            data={"wktPolygon": polygon, "stdVersion": "MV1.9"})
         xml = req.content
 
         # if no stands are found with the polygon
         if "MV-kuvioita ei löytynyt." in xml.decode():
             # add an error message stating that for a polygon, no forest data was found
-            error_messages.append(f"NOTE: No forest found for a polygon from estate {realestateid}.")
+            error_messages.append(
+                f"NOTE: No forest found for a polygon from estate {realestateid}.")
 
             # remove the polygon from the list of coordinates
             coordinates_copy.pop(i)
             continue
 
         if "504 Gateway Time-out" in xml.decode():
-            raise PipelineError("Error connecting to Metsäkeskus API: 504 Gateway Time-out")
+            raise PipelineError(
+                "Error connecting to Metsäkeskus API: 504 Gateway Time-out")
 
         # write the forest data into an XML file
         if platform == "win32":
@@ -260,7 +263,8 @@ def get_polygon_dict(root: ET.Element) -> dict[str, dict[str, tuple[float, float
                                 coordinates = ring.text.split(" ")
                                 coordinate_pairs = []
                                 for coordinate in coordinates:
-                                    coordinate_pairs.append((float(coordinate.split(",")[0]), float(coordinate.split(",")[1])))
+                                    coordinate_pairs.append(
+                                        (float(coordinate.split(",")[0]), float(coordinate.split(",")[1])))
                     exterior_and_interior["exterior"] = coordinate_pairs
                     coordinate_pairs = []
                     # if exists, find the interior polygon (a hole in the stand)
@@ -270,7 +274,8 @@ def get_polygon_dict(root: ET.Element) -> dict[str, dict[str, tuple[float, float
                             for ring in linear_ring:
                                 coordinates = ring.text.split(" ")
                                 for coordinate in coordinates:
-                                    coordinate_pairs.append((float(coordinate.split(",")[0]), float(coordinate.split(",")[1])))
+                                    coordinate_pairs.append(
+                                        (float(coordinate.split(",")[0]), float(coordinate.split(",")[1])))
                         interiors.append(coordinate_pairs)
                     exterior_and_interior["interior"] = interiors
                     orig_polygons[stand_id] = exterior_and_interior
@@ -315,15 +320,17 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
     """
     # loop through the different parts of the real estate
     if len(coordinates) == 0:
-        raise PipelineError("There are no coordinates to use to get XML data! Are you sure the real estate ID is correct?")
-    
+        raise PipelineError(
+            "There are no coordinates to use to get XML data! Are you sure the real estate ID is correct?")
+
     for i in range(len(coordinates)):
         # read the XML into an ElementTree
         tree = ET.parse(f"{realestate_dir}/output_{i+1}.xml")
         root = tree.getroot()
 
         # the target polygon is the original polygon from Maanmittauslaitos
-        target = geom.Polygon(coordinates[i]) # when multiple holdings, go through this in a loop?
+        # when multiple holdings, go through this in a loop?
+        target = geom.Polygon(coordinates[i])
 
         # set the buffer distance
         buffer_distance = 10
@@ -336,13 +343,15 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
         for key, value in orig_polygons.items():
             if len(value["interior"]) > 0:
                 # if there are holes in the stand, the interior will indicate it
-                polygons.append((key, geom.Polygon(value["exterior"], holes=value["interior"])))
+                polygons.append(
+                    (key, geom.Polygon(value["exterior"], holes=value["interior"])))
             else:
                 # if no interior for the stand, there are no holes
                 polygons.append((key, geom.Polygon(value["exterior"])))
 
         # create a GeoPandas GeoDataFrame with the shapely polygons
-        gdf_polygons = gpd.GeoDataFrame({"stand_id": [p[0] for p in polygons], "geometry": [p[1] for p in polygons]})
+        gdf_polygons = gpd.GeoDataFrame(
+            {"stand_id": [p[0] for p in polygons], "geometry": [p[1] for p in polygons]})
 
         # create a GeoDataFrame for the target (holding) polygon
         gdf_target = gpd.GeoDataFrame(geometry=[target])
@@ -350,15 +359,16 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
         # buffer the target polygon
         buffer = gdf_target.buffer(buffer_distance).iloc[0]
 
-        removed = [] # for plotting purposes
+        removed = []  # for plotting purposes
         removed_ids = []
 
         # add the neighboring stands into a list to be removed and drop them from the GeoDataFrame
         for index, stand in gdf_polygons.iterrows():
             if not buffer.contains(stand.geometry):
-                removed.append(stand) # for plotting purposes
+                removed.append(stand)  # for plotting purposes
                 removed_ids.append(stand.stand_id)
-                gdf_polygons = gdf_polygons.drop(index) # also for plotting purposes
+                gdf_polygons = gdf_polygons.drop(
+                    index)  # also for plotting purposes
 
         # loop through the ElementTree
         for child in root:
@@ -383,12 +393,15 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
         namespaces_list = ""
         for key, value in NS.items():
             if value == "http://standardit.tapio.fi/schemas/forestData ForestData.xsd":
-                namespaces_list = namespaces_list + f'xsi:{key}="{value}"' + " "
+                namespaces_list = namespaces_list + \
+                    f'xsi:{key}="{value}"' + " "
             elif key == "default":
                 namespaces_list = namespaces_list + f'xmlns="{value}"' + " "
             else:
-                namespaces_list = namespaces_list + f'xmlns:{key}="{value}"' + " "
-        namespaces_list = namespaces_list + 'schemaPackageVersion="V20" schemaPackageSubversion="V20.01"'
+                namespaces_list = namespaces_list + \
+                    f'xmlns:{key}="{value}"' + " "
+        namespaces_list = namespaces_list + \
+            'schemaPackageVersion="V20" schemaPackageSubversion="V20.01"'
 
         # finalize the first row by adding the correct tag and namespace listing
         first_row = "<ForestPropertyData " + namespaces_list + ">"
@@ -418,7 +431,8 @@ def remove_neighboring_stands(coordinates: list, realestate_dir: str, plot: bool
             gdf_target.plot(ax=ax, color="red", alpha=0.2)
 
             # plot the remaining stands (not removed) in green
-            gdf_polygons.plot(ax=ax, color="green", alpha=0.5,edgecolor="black")
+            gdf_polygons.plot(ax=ax, color="green",
+                              alpha=0.5, edgecolor="black")
 
             # plot the buffer area in blue
             gpd.GeoSeries([buffer]).plot(ax=ax, color="blue", alpha=0.3)
@@ -468,7 +482,8 @@ def combine_xmls(realestate_dir: str, coordinates: list):
         if len(coordinates) != 1:
             # if there are multiple parts of the real estate, the final XML is formed by reading the different XMLs
             # into strings and combining them
-            with Path.open(f"{realestate_dir}/output.xml", "w") as file: # final XML goes into a file name output.xml
+            # final XML goes into a file name output.xml
+            with Path.open(f"{realestate_dir}/output.xml", "w") as file:
                 # read the first part's data from output_1.xml
                 with Path.open(f"{realestate_dir}/output_1.xml", "r") as file2:
                     content = file2.read()
@@ -504,7 +519,8 @@ def combine_xmls(realestate_dir: str, coordinates: list):
         if len(coordinates) != 1:
             # if there are multiple parts of the real estate, the final XML is formed by reading the different XMLs
             # into strings and combining them
-            with Path(f"{realestate_dir}/output.xml").open(mode="w") as file: # final XML goes into a file name output.xml
+            # final XML goes into a file name output.xml
+            with Path(f"{realestate_dir}/output.xml").open(mode="w") as file:
                 # read the first part's data from output_1.xml
                 with Path(f"{realestate_dir}/output_1.xml").open(mode="r") as file2:
                     content = file2.read()
@@ -535,6 +551,7 @@ def combine_xmls(realestate_dir: str, coordinates: list):
                     content = file2.read()
                 file.write(content)
 
+
 def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, extension: str) -> dict:
     descriptions = {}
     if holding:
@@ -552,16 +569,21 @@ def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, ex
                 ext = f".{feat["properties"][extension]}"
             else:
                 ext = ""
-            descriptions[feat["properties"][sid]] = f"Kuvio {feat["properties"][stand]}{ext}: "
+            descriptions[feat["properties"][sid]
+                         ] = f"Kuvio {feat["properties"][stand]}{ext}: "
     return descriptions
+
 
 if __name__ == "__main__":
     # Initialize the arguments expected to be given
     parser = argparse.ArgumentParser()
     arg_msg = "Real estate ids as a list. For example: -i 111-2-34-56 999-888-7777-6666"
-    parser.add_argument("-i", dest="ids", help=arg_msg, type=str, nargs="*", default=[])
-    parser.add_argument("-d", dest="dir", help="Target directory for data.", type=str)
-    parser.add_argument("-n", dest="name", help="Name of forest owner.", type=str, default="test")
+    parser.add_argument("-i", dest="ids", help=arg_msg,
+                        type=str, nargs="*", default=[])
+    parser.add_argument(
+        "-d", dest="dir", help="Target directory for data.", type=str)
+    parser.add_argument("-n", dest="name",
+                        help="Name of forest owner.", type=str, default="test")
     arg_msg = "Path to a (text) file with the API key for Maanmittauslaitos API."
     parser.add_argument("-k", dest="key", help=arg_msg, type=str)
 
@@ -578,7 +600,7 @@ if __name__ == "__main__":
     # Apparently Linux and Windows handles Pathlib differently, so I'll perform a check on the OS.
     if platform == "win32":
         with Path.open(f"{api_key_dir}", "r") as f:
-            api_key = f.read() 
+            api_key = f.read()
     if platform == "linux":
         with Path(f"{api_key_dir}").open() as f:
             api_key = f.read()
@@ -634,14 +656,16 @@ if __name__ == "__main__":
         # get the forest data from Metsäkeskus and write it into XML files,
         # returns any errors and updates coordinates list
         # if no data for some polygon from Metsäkeskus, the coordinates are removed from the list
-        errors, coordinates = write_real_estate_xmls(coordinates, realestateid, realestate_dir)
+        errors, coordinates = write_real_estate_xmls(
+            coordinates, realestateid, realestate_dir)
         # if there were any errors in getting data from Metsäkeskus, print out the errors
         if len(errors) > 0:
             for error in errors:
                 print(error)
 
         # remove stands from the XMLs that no not belong to the real estate and write the XMLs without them
-        removed_ids = remove_neighboring_stands(coordinates, realestate_dir, plot=True)
+        removed_ids = remove_neighboring_stands(
+            coordinates, realestate_dir, plot=True)
 
         # combine the XMLs (forest data) of all the possible separate parts of the real estate into one XML file
         combine_xmls(realestate_dir, coordinates)
@@ -653,9 +677,11 @@ if __name__ == "__main__":
         #   1. data directory from metsi (that has information about prices etc.)
         #   2. a control.yaml file that has the parameters for the metsi simulation
         print(f"Running metsi simulations for {realestateid}...")
-        res = subprocess.run(f"metsi {realestate_dir}/output.xml {realestate_dir}", capture_output=True, shell=True)
+        res = subprocess.run(
+            f"metsi {realestate_dir}/output.xml {realestate_dir}", capture_output=True, shell=True)
         if res.stderr:
-            raise PipelineError("Error when running metsi: " + res.stderr.decode())
+            raise PipelineError(
+                "Error when running metsi: " + res.stderr.decode())
 
         # Convert the simulation output to CSV for optimization purposes
         print(f"Converting metsi output to CSV for {realestateid}...")
@@ -673,13 +699,14 @@ if __name__ == "__main__":
         if platform == "win32":
             with Path.open(f"{realestate_dir}/alternatives.csv", "r") as f:
                 # if the first CSV file, write the first line (headers) as well, if not then only write the data rows
-                alternatives = alternatives + f.read() if i == 0 else alternatives + "\n".join(f.read().split("\n")[1:])
+                alternatives = alternatives + f.read() if i == 0 else alternatives + \
+                    "\n".join(f.read().split("\n")[1:])
 
         if platform == "linux":
             with Path(f"{realestate_dir}/alternatives.csv").open(mode="r") as f:
                 # if the first CSV file, write the first line (headers) as well, if not then only write the data rows
-                alternatives = alternatives + f.read() if i == 0 else alternatives + "\n".join(f.read().split("\n")[1:])
-
+                alternatives = alternatives + f.read() if i == 0 else alternatives + \
+                    "\n".join(f.read().split("\n")[1:])
 
         # read the alternatives info from the CSV file and add the contents to the python variable
 
@@ -689,7 +716,8 @@ if __name__ == "__main__":
                 if i == 0:
                     alternatives_key = alternatives_key + f.read()
                 else:
-                    alternatives_key = alternatives_key + "\n".join(f.read().split("\n")[1:])
+                    alternatives_key = alternatives_key + \
+                        "\n".join(f.read().split("\n")[1:])
 
         if platform == "linux":
             with Path(f"{realestate_dir}/alternatives_key.csv").open(mode="r") as f:
@@ -697,7 +725,8 @@ if __name__ == "__main__":
                 if i == 0:
                     alternatives_key = alternatives_key + f.read()
                 else:
-                    alternatives_key = alternatives_key + "\n".join(f.read().split("\n")[1:])
+                    alternatives_key = alternatives_key + \
+                        "\n".join(f.read().split("\n")[1:])
 
         # read the real estate's carbon.json into a dict and add the contents to a dict with all the owners real estates
         carbon_dict = {}
@@ -730,9 +759,10 @@ if __name__ == "__main__":
                         properties = {}
                         geometry = {}
                         geometry["type"] = "Polygon"
-                        properties["id"] = int(stand.attrib["id"]) # stand id
+                        properties["id"] = int(stand.attrib["id"])  # stand id
                         properties["estate_code"] = realestateid
-                        properties["number"] = int(stand.find("{http://standardit.tapio.fi/schemas/forestData/Stand}StandBasicData").find("{http://standardit.tapio.fi/schemas/forestData/Stand}StandNumber").text)
+                        properties["number"] = int(stand.find("{http://standardit.tapio.fi/schemas/forestData/Stand}StandBasicData").find(
+                            "{http://standardit.tapio.fi/schemas/forestData/Stand}StandNumber").text)
                         coordinates = []
                         # find the exterior polygon for the stand
                         for exterior in stand.iter("{http://www.opengis.net/gml}exterior"):
@@ -741,7 +771,8 @@ if __name__ == "__main__":
                                     coords = ring.text.split(" ")
                                     coordinate_pairs = []
                                     for coordinate in coords:
-                                        coordinate_pairs.append([float(coordinate.split(",")[0]), float(coordinate.split(",")[1])])
+                                        coordinate_pairs.append(
+                                            [float(coordinate.split(",")[0]), float(coordinate.split(",")[1])])
                                     coordinates.append(coordinate_pairs)
                         # if exists, find the interior polygon (a hole in the stand)
                         for interior in stand.iter("{http://www.opengis.net/gml}interior"):
@@ -750,7 +781,8 @@ if __name__ == "__main__":
                                     coords = ring.text.split(" ")
                                     coordinate_pairs = []
                                     for coordinate in coords:
-                                        coordinate_pairs.append([float(coordinate.split(",")[0]), float(coordinate.split(",")[1])])
+                                        coordinate_pairs.append(
+                                            [float(coordinate.split(",")[0]), float(coordinate.split(",")[1])])
                                     coordinates.append(coordinate_pairs)
                         geometry["coordinates"] = coordinates
                         feature["properties"] = properties
@@ -778,7 +810,6 @@ if __name__ == "__main__":
         with Path.open(f"{target_dir}/{name}/carbon.json", "w") as file:
             json.dump(carbons, file)
 
-
     if platform == "linux":
         print("Writing GeoJSON file...")
         with Path(f"{target_dir}/{name}/{name}.geojson").open(mode="w") as file:
@@ -788,7 +819,7 @@ if __name__ == "__main__":
         with Path(f"{target_dir}/{name}/alternatives.csv").open(mode="w") as file:
             file.write(alternatives)
 
-        with Path(f"{target_dir}/{name}/alternatives_key.csv" ).open(mode="w") as file:
+        with Path(f"{target_dir}/{name}/alternatives_key.csv").open(mode="w") as file:
             file.write(alternatives_key)
 
         with Path(f"{target_dir}/{name}/filter.csv").open(mode="w") as file:
@@ -799,23 +830,25 @@ if __name__ == "__main__":
             json.dump(carbons, file)
 
     # Handle the database stuff
-    
+
     # Initiate database connection
     database = SessionLocal()
 
     # Create a user. This user is used in logging in to the web ui.
-    # TODO: If user already exists, do something else.
-    user = db_models.User(
-        username=f"{name}",
-        password_hash=get_password_hash("kissa123"),
-        role=UserRole.DM,
-        privilages=[],
-        user_group="",
-    )
-    database.add(user)
-    database.commit()
-    database.refresh(user)
-    
+    # Do we need some authentication from this end?
+    user = get_user(database, name)
+    if not user:
+        user = db_models.User(
+            username=name,
+            password_hash=get_password_hash("kissa123"),
+            role=UserRole.DM,
+            privilages=[],
+            user_group="",
+        )
+        database.add(user)
+        database.commit()
+        database.refresh(user)
+
     # Create the utopia problem.
     problem_name = f"Utopia-problem: {", ".join(ids)}"
     print("Creating the MOO problem...")
@@ -823,7 +856,7 @@ if __name__ == "__main__":
         data_dir=f"{target_dir}/{name}",
         problem_name=problem_name
     )
-    
+
     # Put the problem into the database
     problem_in_db = db_models.Problem(
         owner=user.id,
@@ -842,13 +875,13 @@ if __name__ == "__main__":
     # Fetch the geojson file
     with Path(f"{target_dir}/{name}/{name}.geojson").open(mode="r") as mapjson:
         forest_map = mapjson.read()
-        
+
     # Put necessary utopia information to the database also
     map_info = db_models.Utopia(
         problem=problem_in_db.id,
         map_json=forest_map,
         schedule_dict=key,
-        years=[5,10,20],
+        years=[5, 10, 20],
         stand_id_field="id",
         stand_descriptor=_generate_descriptions(
             json.loads(forest_map),
@@ -856,10 +889,10 @@ if __name__ == "__main__":
             "number",
             "estate_code",
             "extension"
-        )
+        ),
     )
     database.add(map_info)
-    
+
     # Update user access of the problem
     problem_access = db_models.UserProblemAccess(
         user_id=user.id,
@@ -869,4 +902,3 @@ if __name__ == "__main__":
     database.commit()
     # All done, close the database connection.
     database.close()
-
