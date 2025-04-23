@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Init the submodules, DESDEO and metsi.
-git submodule init && git submodule update
+git submodule init && git submodule update --init --remote --recursive
 # Create the combined virtual environment for the system
 python3.12 -m venv UTOPIA-venv
 # Activate the virutal environment
