@@ -21,4 +21,4 @@ Running setup.sh should take care of setting up the system. For details on setup
 Activate the UTOPIA-venv and run python pipeline/data_pipeline.py (follow its instructions)
 
 ## TODO
-Figure out what to do with the very newest version of Metsi (biggest change, I believe, is control.yaml -> control.py)
+What to do regarding the authentication side of creating a utopia problem. Where does the password and username come from?

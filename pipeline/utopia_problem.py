@@ -410,6 +410,8 @@ def utopia_problem(
     )
     constraints.append(con)
 
+    # TODO: Check if NPV should be calculated here or inside Metsi?
+
     # form the objective function sums
     f_2_func = " + ".join(f_2_func)
     if compensation == 0:
@@ -420,7 +422,7 @@ def utopia_problem(
             + f"{discounting[1]} * (P_2 + {compensation}*C_2) + "
             + f"{discounting[2]} * (P_3 + {compensation}*C_3)"
         )
-    f_1_func = "V_end + " + f_3_func
+    f_1_func = "V_end + 0" # Why isn't simple V_end allowed?
     f_4_func = "C_1 + C_2 + C_3"
 
     # print(f_1_func)
