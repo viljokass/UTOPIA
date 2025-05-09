@@ -27,7 +27,7 @@ poetry install -E "standard api"
 cd .. #UTOPIA
 
 # Initialize the database.
-python pipeline/db_init.py
+python pipeline/utopia_db_init.py
 
 echo
 echo Setup has finished. Just activate the virtual environment "UTOPIA-venv" to use the installation.
