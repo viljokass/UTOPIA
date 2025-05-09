@@ -3,9 +3,10 @@
 To be able to run the whole pipeline, the following scripts are needed (and at the moment assumed to be in the same
 directory as this script, can be made into extra arguments as well):
 
-- convert2opt.R
+- convert_to_opt.py
 - write_trees_json.py
 - write_carbon_json.py
+- utopia_problem.py
 
 The scipt also runs metsi and to be able to do that, there are the following requirements:
 TODO: check these (atleast the control.yaml location can be given as argument to metsi so
@@ -57,6 +58,7 @@ that is a json file with information needed to draw the maps in DESDEO.
 
 NOTE: write_trees_json.py parses trees.txt that is in Jari's changed form. May need some changes with the actual
 metsi form.
+NOTE: Solved (kinda) by modifying the updated metsi installation so that it writes the trees.txt in the same format.
 """
 
 import argparse
@@ -171,6 +173,8 @@ def get_real_estate_coordinates(realestateid: str, api_key: str) -> list:
 
     # get a list of different separate "parts" of the real estate
     features = estate_data["features"]
+    if not features:
+        raise PipelineError("Maanmittauslaitos has returned an empty feature collection. Are you sure that you wrote the right real estate ID?")
 
     # get the coordinates of the different parts into a list
     coordinates = []
@@ -902,3 +906,5 @@ if __name__ == "__main__":
     database.commit()
     # All done, close the database connection.
     database.close()
+
+    # TODO: Since all the necessary data is in the DESDEO problem database, delete the temporary files from local machine.

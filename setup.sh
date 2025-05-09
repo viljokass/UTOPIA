@@ -21,9 +21,14 @@ git restore .
 cd .. #UTOPIA
 
 # Install DESDEO
+# Make sure you have everything you need for building! (build-essentials, python3-dev). Poetry is lacking in error messages.
 cd DESDEO #UTOPIA/DESDEO
 poetry install -E "standard api"
 cd .. #UTOPIA
 
+# Initialize the database.
+python pipeline/db_init.py
+
 echo
 echo Setup has finished. Just activate the virtual environment "UTOPIA-venv" to use the installation.
+echo Then run "uvicorn --app-dir pipeline app:app --reload --port 5174" to start the web API
