@@ -73,6 +73,7 @@ from convert_to_opt import convert_to_opt
 from write_trees_json import write_trees_json
 from write_carbon_json import write_carbon_json
 from utopia_problem import utopia_problem
+from metsi_driver import run_metsi
 
 from desdeo.api import db_models
 from desdeo.api.db import SessionLocal
@@ -577,29 +578,8 @@ def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, ex
                          ] = f"Kuvio {feat["properties"][stand]}{ext}: "
     return descriptions
 
-
-if __name__ == "__main__":
-    # Initialize the arguments expected to be given
-    parser = argparse.ArgumentParser()
-    arg_msg = "Real estate ids as a list. For example: -i 111-2-34-56 999-888-7777-6666"
-    parser.add_argument("-i", dest="ids", help=arg_msg,
-                        type=str, nargs="*", default=[])
-    parser.add_argument(
-        "-d", dest="dir", help="Target directory for data.", type=str)
-    parser.add_argument("-n", dest="name",
-                        help="Name of forest owner.", type=str, default="test")
-    arg_msg = "Path to a (text) file with the API key for Maanmittauslaitos API."
-    parser.add_argument("-k", dest="key", help=arg_msg, type=str)
-
-    # if arguments missing, print out the help messages to inform what is needed
-    args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
-
-    # gather the argument values
-    ids = args.ids
-    target_dir = args.dir
-    name = args.name
-    api_key_dir = args.key
-
+# Separate driver funtion. We can use this from outside the script.
+def run_pipeline(ids, target_dir, name, api_key_dir):
     # get the Maanmittauslaitos api key from the given file
     # Apparently Linux and Windows handles Pathlib differently, so I'll perform a check on the OS.
     if platform == "win32":
@@ -674,18 +654,14 @@ if __name__ == "__main__":
         # combine the XMLs (forest data) of all the possible separate parts of the real estate into one XML file
         combine_xmls(realestate_dir, coordinates)
 
-        # TODO: Address the security issues with instantiating a shell session when subprocessing. (check docs for further details)
-
         # Run the metsi simulator with the data in the XML file
         # Requires that the following are found in the current repository:
         #   1. data directory from metsi (that has information about prices etc.)
         #   2. a control.yaml file that has the parameters for the metsi simulation
         print(f"Running metsi simulations for {realestateid}...")
-        res = subprocess.run(
-            f"metsi {realestate_dir}/output.xml {realestate_dir}", capture_output=True, shell=True)
-        if res.stderr:
-            raise PipelineError(
-                "Error when running metsi: " + res.stderr.decode())
+        res = run_metsi([f"{realestate_dir}/output.xml", f"{realestate_dir}"])
+        if res == 1:
+            raise PipelineError("Something went wrong while running Metsi! See the print.")
 
         # Convert the simulation output to CSV for optimization purposes
         print(f"Converting metsi output to CSV for {realestateid}...")
@@ -908,3 +884,28 @@ if __name__ == "__main__":
     database.close()
 
     # TODO: Since all the necessary data is in the DESDEO problem database, delete the temporary files from local machine.
+
+if __name__ == "__main__":
+    
+    # Initialize the arguments expected to be given
+    parser = argparse.ArgumentParser()
+    arg_msg = "Real estate ids as a list. For example: -i 111-2-34-56 999-888-7777-6666"
+    parser.add_argument("-i", dest="ids", help=arg_msg,
+                        type=str, nargs="*", default=[])
+    parser.add_argument(
+        "-d", dest="dir", help="Target directory for data.", type=str)
+    parser.add_argument("-n", dest="name",
+                        help="Name of forest owner.", type=str, default="test")
+    arg_msg = "Path to a (text) file with the API key for Maanmittauslaitos API."
+    parser.add_argument("-k", dest="key", help=arg_msg, type=str)
+
+    # if arguments missing, print out the help messages to inform what is needed
+    args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
+
+    # gather the argument values
+    ids = args.ids
+    target_dir = args.dir
+    name = args.name
+    api_key_dir = args.key
+
+    run_pipeline(ids=ids, target_dir=target_dir, name=name, api_key_dir=api_key_dir)

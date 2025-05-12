@@ -35,3 +35,5 @@ User needs to be able to start the data-pipeline process over internet. We need 
 Also, after the pipeline has created the MOO problem, remove the user data from the output folder to save space.
 
 There is also the issue of subprocessing. See if there's a way to run metsi through calling a function instead of a subprocess. That, and also the API. Otherwise there could be shell injection and that's not particularly fun.
+
+TODO: New web API integration.

@@ -6,6 +6,7 @@ app = FastAPI(
     title="User and forest data interface",
 )
 
+# See how to handle multiple real estate id's at once.
 def run_pipeline(real_estate_id: str, uname: str):
     # TODO: Put the pipeline behind a function call instead of a subprocess run. Subprocesses, especially with shell enabled, are suspectible to shell injection.
     process = subprocess.run(f"python pipeline/data_pipeline.py -i {real_estate_id} -n {uname} -k ../apikey.txt -d ../output", 
