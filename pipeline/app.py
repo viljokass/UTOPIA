@@ -9,21 +9,10 @@ app = FastAPI(
     title="User and forest data interface",
 )
 
-# Use this to sanintate functions
-
-
 def sanitate(sanitee):
     return sanitee
 
-# Check if id conforms to the real estate id form
-
-
-def check(id) -> bool:
-    return True
-
 # Split and check if real estate id's correspond to the required form
-
-
 def split_real_estate_ids(real_estate_ids):
     ids = real_estate_ids.split(' ')
     checked_ids = []
