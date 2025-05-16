@@ -63,7 +63,6 @@ NOTE: Solved (kinda) by modifying the updated metsi installation so that it writ
 
 import argparse
 import json
-import subprocess
 import sys
 from sys import platform
 from pathlib import Path

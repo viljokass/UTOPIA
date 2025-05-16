@@ -27,13 +27,6 @@ What to do regarding the authentication side of creating a utopia problem. Where
 * Username comes from the script input
 * The password might as well also?
 
-User needs to be able to start the data-pipeline process over internet. We need a "listener" that listens for messages and starts the data pipeline with parameters from the message. What would be the best way to accomplish that?
-* Should the pipeline be run through subprocesses? Or should it be imported?
-* Error propagation? How to communicate to the user that something went wrong?
-* Perhaps the data_pipeline script has to be modularized.
-
 Also, after the pipeline has created the MOO problem, remove the user data from the output folder to save space.
-
-There is also the issue of subprocessing. See if there's a way to run metsi through calling a function instead of a subprocess. That, and also the API. Otherwise there could be shell injection and that's not particularly fun.
 
 TODO: New web API integration.
