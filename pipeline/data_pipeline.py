@@ -108,6 +108,8 @@ NS = {
 class PipelineError(Exception):
     """An error class for the data pipeline."""
 
+class NoUserException(Exception):
+    """ Exception for when there's no user in the database!"""
 
 def parse_real_estate_id(original_id: str) -> str:
     """Get the given real estate id in the long format.

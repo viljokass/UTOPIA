@@ -1,4 +1,4 @@
-from data_pipeline import run_pipeline
+from data_pipeline import run_pipeline, PipelineError, NoUserException
 
 from fastapi import FastAPI, Response, status, Form
 from typing import Annotated
@@ -46,8 +46,13 @@ def prepare_pipeline(real_estate_ids: str, uname: str):
         return "No Real estate IDs detected! Please check your input.", status.HTTP_400_BAD_REQUEST
     try:
         run_pipeline(ids, "../output", uname, "../apikey.txt")
-    except:
+    except PipelineError:
         return "There was an error while processing data. Did you input the real estate ID correctly?", status.HTTP_500_INTERNAL_SERVER_ERROR
+    except NoUserException:
+        return f"It seems that your username ({uname}) couldn't be found from the database.<br>"\
+                "Please check if your username's correct or send us a request to create a user."
+    except:
+        return "Something happened..."
     return "Forest management problem for forest(s) " + ", ".join(ids) + " ready. <br>"\
            "Please proceed to the DESDEO user interface.", status.HTTP_201_CREATED
 
