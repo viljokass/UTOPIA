@@ -38,7 +38,7 @@ The system starts with a real estate registry ID for the forest to be optimized.
 After this, Metsi will simulate growth of the forest and different management plans for the stands. It simulates the forest for (simulated) 25 years, with three stages at years 2, 7 and 17, where operations, such as cutting or thinning the forest, can be made. The results of the simulation are written to files. In the simulation results, each row of the results correspond to one alternate treatment plan. The files will be further processed by scripts "convert_to_opt.py", "write_trees_json.py" and "write_carbon_json.py". 
 
 ### Simulation result post processing
-"convert_to_opt.py" converts data to a more manageable format and will write a "treatment key", that assings each simulated plan a string representation that tells what is done in the plan. For example, a plan that has thinning from above at year 5, nothing at year 10 and clearcut at year 20 would be titled "below_5 + clearcut_20". 
+"convert_to_opt.py" converts data to a more manageable format and will write a "treatment key", that assings each simulated plan a string representation that tells what is done in the plan. For example, a plan that has thinning from above at year 5, nothing at year 10 and clearcut at year 20 would be titled "above_5 + clearcut_20". 
 
 "write_trees_json.py" and "write_carbon_json.py" script will calculate how much carbon the forest stores at each stage of the management plan.
 
