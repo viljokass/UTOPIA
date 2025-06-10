@@ -22,7 +22,7 @@ DESDEO is used to handle the multi-objective optimization aspect of this system.
 
 Metsi is used to simulate the data for the multiobjective optimization problem based on the data produced by the data pipeline code. It has documentation in its repository.
 
-The data pipeline code takes care of fetching the data from Natural Resources Institution and Forest Center the simulator and running DESDEO and metsi. It will be documented here.
+The data pipeline code takes care of fetching the data from Natural Resources Institution and Forest Center the simulator and running DESDEO and metsi. It will be documented here. The data pipeline code was originally developed by Matias Nieminen (https://github.com/Matskuu/).
 
 ## Data pipeline code
 
