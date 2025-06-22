@@ -50,9 +50,9 @@ def prepare_pipeline(real_estate_ids: str, uname: str):
         return "There was an error while processing data. Did you input the real estate ID correctly?", status.HTTP_500_INTERNAL_SERVER_ERROR
     except NoUserException:
         return f"It seems that your username ({uname}) couldn't be found from the database.<br>"\
-                "Please check if your username's correct or send us a request to create a user."
+                "Please check if your username's correct or send us a request to create a user.", status.HTTP_500_INTERNAL_SERVER_ERROR
     except:
-        return "Something happened..."
+        return "Something happened... Please try again in a few moments.", status.HTTP_500_INTERNAL_SERVER_ERROR
     return "Forest management problem for forest(s) " + ", ".join(ids) + " ready. <br>"\
            "Please proceed to the DESDEO user interface.", status.HTTP_201_CREATED
 
