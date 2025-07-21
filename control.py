@@ -1,8 +1,13 @@
-from examples.declarations.export_prepro import csv_and_json
 from lukefi.metsi.domain.pre_ops import *
 from lukefi.metsi.domain.sim_ops import *
 from lukefi.metsi.sim.generators import *
 
+default = {} # Empty dict declares a default output content
+
+csv_and_json = {
+    'csv': default,
+    'json': default
+}
 
 control_structure = {
     "app_configuration": {
