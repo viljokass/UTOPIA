@@ -1,27 +1,34 @@
 from pathlib import Path
+from collections import defaultdict
 from lukefi.metsi.app.app_types import SimResults
 from lukefi.metsi.app.file_io import row_writer
-from lukefi.metsi.domain.utils.collectives import LazyListDataFrame
 from lukefi.metsi.domain.collected_types import CrossCutResult
+from lukefi.metsi.sim.core_types import CollectedData
 
 
 def scan_operation_type_for_event(year: int, cross_cut: list[CrossCutResult]) -> str:
-    try:
-        val = next(filter(lambda r: r.time_point == year and r.source == "harvested", cross_cut)).operation
-        return val
-    except:
-        return 'unknown_operation'
+    val = next(filter(lambda r: r.time_point == year and r.source == "harvested", cross_cut)).operation
+    return val
 
 
-def collect_rows_for_events(derived_data: dict, data_source: str, stand_id: str, schedulenum: str) -> list[str]:
+def group_crosscut_by_year_and_source(results: list[CrossCutResult]) -> dict[tuple[int, str], list[CrossCutResult]]:
+    grouped = defaultdict(list)
+    for r in results:
+        grouped[(r.time_point, r.source)].append(r)
+    return grouped
+
+
+def collect_rows_for_events(derived_data: CollectedData, data_source: str, stand_id: str, schedulenum: str) -> list[str]:
     """Create rows for events in a single schedule"""
     retval = []
     timber_events = derived_data.get('report_state')
     standing_tree_data = derived_data.get('collect_standing_tree_properties')
     felled_tree_data = derived_data.get('collect_felled_tree_properties')
-    cross_cut_results = derived_data.get('cross_cutting')
+    cross_cut_results: list[CrossCutResult] = derived_data.get('cross_cutting')
+    grouped = group_crosscut_by_year_and_source(cross_cut_results)
+
     for year, report in timber_events.items():
-        event_details = collect_timber_data_for_year(report, year, cross_cut_results)
+        event_details = collect_timber_data_for_year(year, grouped)
 
         for event in event_details:
             header = " ".join([str(event['event_type']), str(event['year']), str(event['source']), str(round(event['total'], 2)), "m3/ha"])
@@ -49,22 +56,32 @@ def collect_rows_for_events(derived_data: dict, data_source: str, stand_id: str,
     return retval
 
 
-def find_volumes_for_source(results: list[CrossCutResult], year: int, source: str) -> list[float]:
-    f = LazyListDataFrame(results)
+def find_volumes_for_source(grouped: dict[tuple[int, str], list[CrossCutResult]],
+                            year: int, source: str) -> list[float]:
+    filtered = grouped.get((year, source), [])
+
+    def volume_sum(species_cond, grade):
+        return sum(
+            r.volume_per_ha
+            for r in filtered
+            if species_cond(r.species) and r.timber_grade == grade
+        )
+
     return [
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 1) & (f.timber_grade == 1) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 1) & (f.timber_grade == 2) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 1) & (f.timber_grade == 3) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 2) & (f.timber_grade == 1) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 2) & (f.timber_grade == 2) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & (f.species == 2) & (f.timber_grade == 3) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & ((f.species != 1) & (f.species !=2)) & (f.timber_grade == 1) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & ((f.species != 1) & (f.species !=2)) & (f.timber_grade == 2) & (f.source == source)]),
-        sum(f.volume_per_ha[(f.time_point == year) & ((f.species != 1) & (f.species !=2)) & (f.timber_grade == 3) & (f.source == source)])
+        volume_sum(lambda s: s == 1, 1),
+        volume_sum(lambda s: s == 1, 2),
+        volume_sum(lambda s: s == 1, 3),
+        volume_sum(lambda s: s == 2, 1),
+        volume_sum(lambda s: s == 2, 2),
+        volume_sum(lambda s: s == 2, 3),
+        volume_sum(lambda s: s != 1 and s != 2, 1),
+        volume_sum(lambda s: s != 1 and s != 2, 2),
+        volume_sum(lambda s: s != 1 and s != 2, 3),
     ]
 
 
-def collect_timber_data_for_year(report: dict, year: int, cross_cut_results: list[CrossCutResult]) -> list[dict]:
+def collect_timber_data_for_year(
+        year: int, cross_cut_results: dict[tuple[int, str], list[CrossCutResult]]) -> list[dict]:
     """Compose collection objects for timber volume details"""
     stock = find_volumes_for_source(cross_cut_results, year, "standing")
     timber = find_volumes_for_source(cross_cut_results, year, "harvested")
@@ -73,10 +90,12 @@ def collect_timber_data_for_year(report: dict, year: int, cross_cut_results: lis
     total_timber = sum(timber)
     # TODO: At this moment we have no explicit flag to disambiguate the "State Year" from "Node before Event"
     stock_year_type = 'Node' if total_timber > 0 else 'State'
-    retval.append({'year': year, 'event_type': stock_year_type, 'total': total_stock, 'values': stock, 'source': 'Stock'})
+    retval.append({'year': year, 'event_type': stock_year_type,
+                  'total': total_stock, 'values': stock, 'source': 'Stock'})
     if total_timber > 0:
         operation = scan_operation_type_for_event(year, cross_cut_results)
-        retval.append({'year': year, 'event_type': 'Event', 'total': total_timber, 'values': timber, 'source': operation})
+        retval.append({'year': year, 'event_type': 'Event', 'total': total_timber,
+                      'values': timber, 'source': operation})
     return retval
 
 
@@ -86,19 +105,19 @@ def prepare_schedules_file_content(data: SimResults, data_source: str) -> list[s
     years within.
 
     :param data: SimResults package
-    :param data_source: "trees" for standing/harvested tree variables content, "timber" for standing/harvested timber volume content
+    :param data_source: "trees" for standing/harvested tree variables content, 
+                        "timber" for standing/harvested timber volume content
     :return: list of strings representing file rows
     """
     output_rows = []
     for stand_id, payload in data.items():
-        header = str(stand_id) 
-        #output_rows.append(f"Stand {stand_id} Area {payload[0].computational_unit.area}")
+        header = str(stand_id)
+        # schedule_rows = [f"Stand {stand_id} Area {payload[0].computational_unit.area}"]
         for schedule_number, schedule_derived_data in enumerate(map(lambda x: x.collected_data, payload)):
-          prepared = collect_rows_for_events(schedule_derived_data, data_source, str(stand_id), str(schedule_number))
-#            output_rows.append(f"{stand_id} {schedule_number} {year}") # Schedule repl by {stand_id}
-#            output_rows.append(f"{stand_id} {schedule_number} {trees}".join(str(prepared[0])))
-          output_rows.extend(prepared)
-          output_rows.append("")
+            # rows = [f"Schedule {schedule_number}"]
+            prepared = collect_rows_for_events(schedule_derived_data, data_source, str(stand_id), str(schedule_number))
+            output_rows.extend(prepared)
+            output_rows.append("")
         output_rows.append("")
     return output_rows
 
