@@ -11,6 +11,7 @@ The system requires:
 * Python 3.12
 * (linux) Python 3 development tools
 * A valid Maanmittauslaitos API-key (https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje)
+* (PostgreSQL)
 
 ## Structure
 The system has three main components:
@@ -61,6 +62,8 @@ After the forest problem and all associated information is in the database, the 
 
 ## Setup
 Running setup.sh should take care of setting up the system. The script creates a Python 3.12 virtual environment (UTOPIA-venv) and installs both Metsi and DESDEO into it. Then it initializes the database used to store DESDEO created optimization problems and other relevant information, such as the map of the forest.
+
+NOTE: Current version of DESDEO uses PostgreSQL. If setting up complains about not beign able to access the databse or something, remember set environment variables, such as POSTGRES_PASSWORD to access the database.
 
 ## Operation
 To start the system, activate the UTOPIA-venv and either 
