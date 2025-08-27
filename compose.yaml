@@ -1,0 +1,37 @@
+# This compose.yaml file must have and accompanying .env file with the following fields:
+# * POSTGRES_PASSWORD: the password for postgresql database
+# * APIKEY_LOC: the location of the maanmittauslaitos apikey
+# * GRB_LICENCE_LOG: the location of the gurobi.lic file
+
+services:
+  utopia:
+    image: utopia:latest
+    ports: 
+      - 127.0.0.1:8000:8000
+      - 127.0.0.1:5174:5174
+    working_dir: /app/wd
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APIKEY: /run/secrets/apikey
+      GRB_LICENSE_FILE: /run/secrets/gurobi.lic
+    secrets:
+      - apikey
+      - gurobi.lic
+
+  postgres:
+    image: postgres:13.22-trixie
+    volumes:
+      - utopia-postgresql-data:/var/lib/postgresql
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+secrets:
+  apikey:
+    file: ${APIKEY_LOC}
+  gurobi.lic:
+    file: ${GRB_LICENSE_LOC}
+
+volumes:
+  utopia-postgresql-data:
+

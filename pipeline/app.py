@@ -3,8 +3,9 @@ from data_pipeline import run_pipeline, PipelineError, NoUserException
 from fastapi import FastAPI, Response, status, Form
 from typing import Annotated
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+
 import re
+import os
 
 # regex pattern to match to the real estate registry ID form
 pattern = re.compile(r":[0-9]{1,3}-[0-9]{1,3}-[0-9]{1,4}-[0-9]{1,4}:")
@@ -45,22 +46,25 @@ def prepare_pipeline(real_estate_ids: str, uname: str):
     if len(ids) == 0:
         return "No Real estate IDs detected! Please check your input.", status.HTTP_400_BAD_REQUEST
     try:
-        run_pipeline(ids, "../output", uname, "../apikey.txt")
+        run_pipeline(ids, os.environ.get("PIPELINE_OUTPUT", "../output"), uname, f"{os.environ.get("APIKEY", "../apikey.txt")}")
     except PipelineError:
         return "There was an error while processing data. Did you input the real estate ID correctly?", status.HTTP_500_INTERNAL_SERVER_ERROR
     except NoUserException:
         return f"It seems that your username ({uname}) couldn't be found from the database.<br>"\
                 "Please check if your username's correct or send us a request to create a user.", status.HTTP_500_INTERNAL_SERVER_ERROR
-    except:
-        return "Something happened... Please try again in a few moments.", status.HTTP_500_INTERNAL_SERVER_ERROR
+    except Exception as e:
+        return f"Something happened... Please try again in a few moments. {e}", status.HTTP_500_INTERNAL_SERVER_ERROR
     return "Forest management problem for forest(s) " + ", ".join(ids) + " ready. <br>"\
            "Please proceed to the DESDEO user interface.", status.HTTP_201_CREATED
 
 @app.post("/generate", response_class=HTMLResponse)
 def pipeline(uname: Annotated[str, Form()], real_estate_ids: Annotated[str, Form()]):
     print(uname, real_estate_ids)
-    result, code = prepare_pipeline(
-        real_estate_ids=real_estate_ids, uname=uname)
+    try:
+        result, code = prepare_pipeline(
+            real_estate_ids=real_estate_ids, uname=uname)
+    except Exception as e:
+        print(f"Exception: {e}")
     content = response_page(result)
     return HTMLResponse(content=content, status_code=code)
 
