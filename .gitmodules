@@ -1,3 +1,7 @@
 [submodule "metsi"]
 	path = metsi
 	url = https://github.com/viljokass/metsi
+[submodule "DESDEO"]
+	path = DESDEO
+	url = https://github.com/viljokass/DESDEO
+	branch = UTOPIA
