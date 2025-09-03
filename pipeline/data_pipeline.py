@@ -64,6 +64,7 @@ NOTE: Solved (kinda) by modifying the updated metsi installation so that it writ
 import argparse
 import json
 import sys
+import shutil
 from sys import platform
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -74,10 +75,9 @@ from write_carbon_json import write_carbon_json
 from utopia_problem import utopia_problem
 from metsi_driver import run_metsi
 
-from desdeo.api import db_models
-from desdeo.api.db import SessionLocal
-from desdeo.api.routers.UserAuth import get_password_hash, get_user
-from desdeo.api.schema import ObjectiveKind, ProblemKind, Solvers, UserRole
+from desdeo.api.db import get_session
+from desdeo.api.models import ProblemDB, ProblemMetaDataDB, ForestProblemMetaData
+from desdeo.api.routers.user_authentication import get_user
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -581,6 +581,15 @@ def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, ex
 
 # Separate driver funtion. We can use this from outside the script.
 def run_pipeline(ids, target_dir, name, api_key_dir):
+    # TODO: first of all check if the user exists in the database
+
+    start_session = next(get_session())
+    user = get_user(session=start_session, username=name)
+    if not user:
+        raise PipelineError(f"No user named {name}")
+    # Close the connection to database.
+    start_session.close()
+
     # get the Maanmittauslaitos api key from the given file
     # Apparently Linux and Windows handles Pathlib differently, so I'll perform a check on the OS.
     if platform == "win32":
@@ -813,22 +822,7 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
     # Handle the database stuff
 
     # Initiate database connection
-    database = SessionLocal()
-
-    # Create a user. This user is used in logging in to the web ui.
-    # Do we need some authentication from this end?
-    user = get_user(database, name)
-    if not user:
-        user = db_models.User(
-            username=name,
-            password_hash=get_password_hash("kissa123"),
-            role=UserRole.DM,
-            privilages=[],
-            user_group="",
-        )
-        database.add(user)
-        database.commit()
-        database.refresh(user)
+    session = next(get_session())
 
     # Create the utopia problem.
     problem_name = f"Utopia-problem: {", ".join(ids)}"
@@ -839,6 +833,9 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
     )
 
     # Put the problem into the database
+    # TODO: update to new API
+    problem_in_db = ProblemDB.from_problem(problem_instance=problem, user=user)
+    """
     problem_in_db = db_models.Problem(
         owner=user.id,
         name=problem_name,
@@ -849,15 +846,47 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
         presumed_nadir=problem.get_nadir_point(),
         value=problem.model_dump(mode="json"),
     )
-    database.add(problem_in_db)
-    database.commit()
-    database.refresh(problem_in_db)
+    """
+    session.add(problem_in_db)
+    session.commit()
+    session.refresh(problem_in_db)
 
     # Fetch the geojson file
     with Path(f"{target_dir}/{name}/{name}.geojson").open(mode="r") as mapjson:
         forest_map = mapjson.read()
 
     # Put necessary utopia information to the database also
+    metadata_db = ProblemMetaDataDB(
+        problem_id=problem_in_db.id,
+        problem=problem_in_db
+    )
+    session.add(metadata_db)
+    session.commit()
+    session.refresh(metadata_db)
+
+    forest_metadata = ForestProblemMetaData(
+        metadata_id=metadata_db.id,
+        map_json=forest_map,
+        schedule_dict=key,
+        years=list(map(lambda x: str(x), [5, 10, 20])),
+        stand_id_field="id",
+        stand_descriptor=_generate_descriptions(
+            json.loads(forest_map),
+            "id",
+            "number",
+            "estate_code",
+            "extension"
+        ),
+        compensation=None,
+        metadata_instance=metadata_db
+    )
+    session.add(forest_metadata)
+    session.commit()
+    session.refresh(forest_metadata)
+    metadata_db.forest_metadata = [forest_metadata]
+    session.add(metadata_db)
+    session.commit()
+    """
     map_info = db_models.Utopia(
         problem=problem_in_db.id,
         map_json=forest_map,
@@ -872,19 +901,22 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
             "extension"
         ),
     )
-    database.add(map_info)
-
+    """
+    # database.add(forest_metadata_db)
+    """
     # Update user access of the problem
     problem_access = db_models.UserProblemAccess(
         user_id=user.id,
         problem_access=problem_in_db.id,
     )
     database.add(problem_access)
-    database.commit()
     # All done, close the database connection.
-    database.close()
+    """
+    # database.commit()
+    session.close()
 
-    # TODO: Since all the necessary data is in the DESDEO problem database, delete the temporary files from local machine.
+    # Since all the necessary data is in the DESDEO problem database, delete the temporary files from local machine.
+    shutil.rmtree(f"{target_dir}/{name}")
 
 if __name__ == "__main__":
     

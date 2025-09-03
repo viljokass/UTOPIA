@@ -23,12 +23,11 @@ cd .. #UTOPIA
 # Install DESDEO
 # Make sure you have everything you need for building! (build-essentials, python3-dev). Poetry is lacking in error messages.
 cd DESDEO #UTOPIA/DESDEO
-poetry install -E "standard api"
+poetry install -E web
 cd .. #UTOPIA
 
 # Initialize the database.
+# TESTING: for e.g. docker deployment, use .env files
 python pipeline/utopia_db_init.py
-
-echo
-echo Setup has finished. Just activate the virtual environment "UTOPIA-venv" to use the installation.
-echo Then run "uvicorn --app-dir pipeline app:app --reload --port 5174" to start the web API
+# TESTING: DESDEO's run_fullstack uses DESDEO/desdeo/api's test.db, so make that a hard link to this folder's test.db
+ln test.db DESDEO/desdeo/api/test.db

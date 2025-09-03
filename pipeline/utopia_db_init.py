@@ -3,56 +3,52 @@ This module initializes the database.
 Essentially a copy of DESDEO/desdeo/api/db_init.py, just with the test user and example problems removed.
 """
 
-import json
-from os import walk
 import warnings
 
-import numpy as np
-import polars as pl
-from sqlalchemy import text
-from sqlalchemy_utils import create_database, database_exists, drop_database
+from sqlalchemy_utils import database_exists
+from sqlmodel import Session, SQLModel
 
-from desdeo.api import db_models
-from desdeo.api.config import DBConfig
-from desdeo.api.db import Base, SessionLocal, engine
-from desdeo.api.routers.UserAuth import get_password_hash
-from desdeo.api.schema import Methods, ObjectiveKind, ProblemKind, Solvers, UserPrivileges, UserRole
-from desdeo.problem.schema import DiscreteRepresentation, Objective, Problem, Variable
+from desdeo.api.config import ServerDebugConfig, SettingsConfig
+from desdeo.api.db import engine
+from desdeo.api.models import ProblemDB, User, UserRole
+from desdeo.api.routers.user_authentication import get_password_hash
+from desdeo.problem.testproblems import dtlz2, river_pollution_problem, simple_knapsack
 
-# The following line creates the database and tables. This is not ideal, but it is simple for now.
-# TODO: Remove this line and create a proper database migration system.
-print("Creating database tables.")
-if not database_exists(engine.url):
-    create_database(engine.url)
-else:
-    warnings.warn("Database already exists. Clearing it.", stacklevel=1)
+problems = [dtlz2(10, 3), simple_knapsack(), river_pollution_problem()]
 
-    # Drop all active connections
-    db = SessionLocal()
-    terminate_connections_sql = text("""
-        SELECT pg_terminate_backend(pid)
-        FROM pg_stat_activity
-        WHERE datname = :db_name AND pid <> pg_backend_pid();
-    """)
-    db.execute(terminate_connections_sql, {"db_name": DBConfig.db_database})
+if __name__ == "__main__":
+    if SettingsConfig.debug:
+        # debug stuff
 
-    # Drop all tables
-    Base.metadata.drop_all(bind=engine)
-print("Database tables created.")
+        print("Creating database tables.")
+        if not database_exists(engine.url):
+            SQLModel.metadata.create_all(engine)
+        else:
+            warnings.warn("Database already exists. Clearing it.", stacklevel=1)
+            # Drop all tables
+            SQLModel.metadata.drop_all(bind=engine)
+            SQLModel.metadata.create_all(engine)
+        print("Database tables created.")
 
-# Create the tables in the database.
-Base.metadata.create_all(bind=engine)
+        with Session(engine) as session:
+            user_analyst = User(
+                username=ServerDebugConfig.test_user_analyst_name,
+                password_hash=get_password_hash(ServerDebugConfig.test_user_analyst_password),
+                role=UserRole.analyst,
+                group="test",
+            )
+            session.add(user_analyst)
+            session.commit()
+            session.refresh(user_analyst)
 
-# Create test users
-db = SessionLocal()
+            for problem in problems:
+                problem_db = ProblemDB.from_problem(problem, user_analyst)
 
-# Add the NIMBUS method into the database
-nimbus = db_models.Method(
-    kind=Methods.NIMBUS,
-    properties=[],
-    name="NIMBUS",
-)
-db.add(nimbus)
-db.commit()
+                session.add(problem_db)
 
-db.close()
+            session.commit()
+            session.refresh(problem_db)
+
+    else:
+        # deployment stuff
+        pass

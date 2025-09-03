@@ -1,3 +1,5 @@
+.env
 .vscode
 __pycache__
 UTOPIA-venv/
+test.db
