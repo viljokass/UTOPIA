@@ -65,6 +65,7 @@ import argparse
 import json
 import sys
 import shutil
+import subprocess
 from sys import platform
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -669,9 +670,8 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
         #   1. data directory from metsi (that has information about prices etc.)
         #   2. a control.yaml file that has the parameters for the metsi simulation
         print(f"Running metsi simulations for {realestateid}...")
-        res = run_metsi([f"{realestate_dir}/output.xml", f"{realestate_dir}"])
-        if res == 1:
-            raise PipelineError("Something went wrong while running Metsi! See the print.")
+        # This should be safe because we're filling the thing with parameters to metsi and doing "; whatever" should not work.
+        subprocess.call(["metsi", f"{realestate_dir}/output.xml", f"{realestate_dir}"])
 
         # Convert the simulation output to CSV for optimization purposes
         print(f"Converting metsi output to CSV for {realestateid}...")
