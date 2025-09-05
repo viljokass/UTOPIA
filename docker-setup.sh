@@ -21,5 +21,5 @@ cd .. #UTOPIA
 # Install DESDEO
 # Make sure you have everything you need for building! (build-essentials, python3-dev). Poetry is lacking in error messages.
 cd DESDEO #UTOPIA/DESDEO
-poetry install -E "standard api"
+poetry install -E web
 cd .. #UTOPIA
