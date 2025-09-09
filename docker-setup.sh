@@ -23,3 +23,6 @@ cd .. #UTOPIA
 cd DESDEO #UTOPIA/DESDEO
 poetry install -E web
 cd .. #UTOPIA
+
+# Install rest (websockets, etc)
+pip install uvicorn[standard]

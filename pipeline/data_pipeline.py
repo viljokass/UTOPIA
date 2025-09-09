@@ -587,7 +587,7 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
     start_session = next(get_session())
     user = get_user(session=start_session, username=name)
     if not user:
-        raise PipelineError(f"No user named {name}")
+        raise NoUserException(f"No user named {name}")
     # Close the connection to database.
     start_session.close()
 

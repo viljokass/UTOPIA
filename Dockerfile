@@ -16,7 +16,7 @@ RUN apt-get update && \
     apt-get install -y \
     r-base-core python3 \
     python3-venv git \
-    curl build-essential \
+    curl build-essential libpq-dev \
     python3-dev libtirpc-dev wget && \
     apt-get clean all && mkdir -p $SOLVER_BINARIES_DIR && \
     wget -qO- https://github.com/industrial-optimization-group/DESDEO/releases/download/supplementary/solver_binaries.tgz | tar -xz -C $SOLVER_BINARIES_DIR && \
@@ -30,7 +30,7 @@ COPY --from=builder /opt /opt
 COPY . .
 
 RUN apt-get update && \
-    apt-get install -y python3 r-base-core && apt-get clean all && \
+    apt-get install -y python3 r-base-core libpq-dev && apt-get clean all && \
     chmod 777 /app/
 
 ENV SOLVER_BINARIES_DIR="/opt/solver_binaries"
@@ -40,5 +40,3 @@ ENV PIPELINE_OUTPUT="/app/output"
 USER 1000
 
 CMD ["./docker-run.sh"]
-
-EXPOSE 8000 5174

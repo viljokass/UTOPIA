@@ -41,6 +41,7 @@ if __name__ == "__main__":
             session.commit()
             session.refresh(user_analyst)
 
+            """
             for problem in problems:
                 problem_db = ProblemDB.from_problem(problem, user_analyst)
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
 
             session.commit()
             session.refresh(problem_db)
+            """
 
     else:
         # deployment stuff

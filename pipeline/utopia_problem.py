@@ -491,7 +491,7 @@ def utopia_problem(
 
     f_1 = Objective(
         name="Nettonykyarvo / €",
-        symbol="nettonykyarvo",
+        symbol="net_present_value",
         func=f_1_func,
         maximize=True,
         ideal=math.ceil(ideals["f_1"]),
@@ -504,7 +504,7 @@ def utopia_problem(
 
     f_2 = Objective(
         name=f"Puuston tilavuus / m^3\n(alussa {wood_volume_0}m^3)",
-        symbol="puuston_tilavuus",
+        symbol="wood_volume",
         func=f_2_func,
         maximize=True,
         ideal=math.ceil(ideals["f_2"]),
@@ -517,7 +517,7 @@ def utopia_problem(
 
     f_3 = Objective(
         name="Hakkuiden tuotto / €",
-        symbol="hakkuutuotto",
+        symbol="profit_from_cutting",
         func=f_3_func,
         maximize=True,
         ideal=math.ceil(ideals["f_3"]),
@@ -530,7 +530,7 @@ def utopia_problem(
 
     f_4 = Objective(
         name="Sidottu hiilidioksidi / (v·t)",
-        symbol="sidottu_hiilidioksidi",
+        symbol="stored_carbon",
         func=f_4_func,
         maximize=True,
         ideal=math.ceil(ideals["f_4"]),
