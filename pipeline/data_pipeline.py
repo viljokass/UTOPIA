@@ -78,7 +78,7 @@ from metsi_driver import run_metsi
 
 from desdeo.api.db import get_session
 from desdeo.api.models import ProblemDB, ProblemMetaDataDB, ForestProblemMetaData
-from desdeo.api.routers.user_authentication import get_user
+from desdeo.api.routers.user_authentication import get_user, verify_password
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -109,7 +109,7 @@ NS = {
 class PipelineError(Exception):
     """An error class for the data pipeline."""
 
-class NoUserException(Exception):
+class UserException(Exception):
     """ Exception for when there's no user in the database!"""
 
 def parse_real_estate_id(original_id: str) -> str:
@@ -582,14 +582,6 @@ def _generate_descriptions(mapjson: dict, sid: str, stand: str, holding: str, ex
 
 # Separate driver funtion. We can use this from outside the script.
 def run_pipeline(ids, target_dir, name, api_key_dir):
-    # TODO: first of all check if the user exists in the database
-
-    start_session = next(get_session())
-    user = get_user(session=start_session, username=name)
-    if not user:
-        raise NoUserException(f"No user named {name}")
-    # Close the connection to database.
-    start_session.close()
 
     # get the Maanmittauslaitos api key from the given file
     # Apparently Linux and Windows handles Pathlib differently, so I'll perform a check on the OS.
@@ -833,7 +825,11 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
     )
 
     # Put the problem into the database
-    # TODO: update to new API
+    
+    # At this point, the user should definitely exist.
+    user = get_user(session=session, username=name)
+    if not user:
+        raise UserException("User not found.")
     problem_in_db = ProblemDB.from_problem(problem_instance=problem, user=user)
     """
     problem_in_db = db_models.Problem(
