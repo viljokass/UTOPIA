@@ -104,8 +104,6 @@ def create_user_endpoint(
     password: Annotated[str, Form()],
     session: Annotated[Session, Depends(get_session)]
 ):
-    print(uname)
-    print(password)
     user = get_user(session=session, username=uname)
     if user is not None:
         return HTMLResponse(response_page(f"User with name \"{uname}\" already exists in the database!"))
