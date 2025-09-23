@@ -33,12 +33,11 @@ def split_real_estate_ids(real_estate_ids):
 
 def prepare_pipeline(
         uname: str,
-        password: str,
         real_estate_ids: str, 
 ):
     ids = split_real_estate_ids(real_estate_ids=real_estate_ids)
     if len(ids) == 0:
-        return "No Real estate IDs detected! Please check your input.", status.HTTP_400_BAD_REQUEST
+        return "No Real estate IDs detected! Please check your input."
     try:
         run_pipeline(
             name=uname,
@@ -47,23 +46,50 @@ def prepare_pipeline(
             api_key_dir=f"{os.environ.get("APIKEY_PATH", "../apikey.txt")}"
         )
     except PipelineError:
-        return "There was an error while processing data. Did you input the real estate ID correctly?", status.HTTP_500_INTERNAL_SERVER_ERROR
+        return "There was an error while processing data. Did you input the real estate ID correctly?"
     except UserException as e:
-        return f"{e}", status.HTTP_500_INTERNAL_SERVER_ERROR
+        return f"{e}"
     except Exception as e:
-        return f"Something happened... Please try again in a few moments. {e}", status.HTTP_500_INTERNAL_SERVER_ERROR
+        return f"Something happened... Please try again in a few moments. {e}"
     return "Forest management problem for forest(s) " + ", ".join(ids) + " ready. "\
-           "Please proceed to the DESDEO user interface.", status.HTTP_201_CREATED
+           "Please proceed to the DESDEO user interface."
+
+
+style = """
+<style>
+body {
+    background-color: aliceblue;
+    padding-left: 1em;
+    padding-right: 1em;
+}
+#footer {
+    position: fixed;
+    bottom: 0px;
+    font-size: 20px;
+}
+</style>
+"""
+
+back = """
+<p><a href="/"> Back </a></p>
+"""
+
+footer = """
+<p id=footer> <a href="https://optgroup.it.jyu.fi/"> Multiobjective Optimization Group </p>
+"""
 
 def response_page(message: str):
     return f"""
     <html>
         <head>
             <title>The UTOPIA system</title>
+            """ + style + """
         </head>
         <body>
             <h1>Server message</h1>
             <p>{message}</p>
+            """ + back + """
+            """ + footer + """
         </body>
     </html>
     """
@@ -73,10 +99,11 @@ html2 = """
 <html>
     <head>
         <title>The forest problem creator</title>
+        """ + style + """
     </head>
     <body>
         <h1>The forest problem creator</h1>
-        <p> Create a DESDEO user. <a href="/">Go back</a></p>
+        <p> Create a DESDEO user.</p>
         <form action="/create_user_endpoint" method="POST" name="form">
                 <div>
                     <label for="uname">Username</label><br>
@@ -90,6 +117,8 @@ html2 = """
                     <button>Create user</button>
                 </div>
             </form>
+    """ + back + """
+    """ + footer + """
     </body>
 </html>
 """
@@ -133,15 +162,25 @@ html1 = """
 <html>
     <head>
         <title>The forest problem creator</title>
+        """ + style + """
     </head>
     <body>
         <h1>The forest problem creator</h1>
-        <p> Input your DESDEO username and your forest's real estate ID. (No user in DESDEO? Create new one <a href="/create_user">here</a>.) <p>
-        <p> The system will then process your request and generate a multiobjective optimization problem. You shall be notified. </p>
+        <p> Input your DESDEO username, password and your forest's real estate ID. (No user in DESDEO? Create new one <a href="/create_user">here</a>.) <p>
+        <p> The system will then process your request and generate a multiobjective optimization problem. You'll receive a notification once that's done. </p>
         <form action="" onsubmit="sendMessage(event)">
-            <p>Username: <input type="text" id="uname" autocomplete="off"/></p>
-            <p>Password: <input type="password" id="pw" autocomplete="off"/></p>
-            <p>Forest real estate ID: <input type="text" id="forestid" autocomplete="off"/><br> </p>
+            <div>
+                <label for="uname">Username</label><br>
+                <input type="text" name="uname" id="uname" value=""/>
+            </div>
+            <div>
+                <label for="password">Password</label><br>
+                <input type="password" name="password" id="password" value=""/>
+            </div>
+            <div>
+                <label for="forestid">Forest real estate ID:</label><br>
+                <input type="text" name="forestid" id="forestid" value=""/>
+            </div>
             <button id="button">Start Customization</button>
         </form>
         <ul id='messages'>
@@ -159,15 +198,16 @@ html1 = """
             function sendMessage(event) {
                 document.getElementById("button").disabled = true;
                 var uname = document.getElementById("uname")
-                var pw = document.getElementById("pw")
+                var password = document.getElementById("password")
                 var forestid = document.getElementById("forestid")
-                ws.send(uname.value + " ?? " + pw.value + " ?? " + forestid.value)
+                ws.send(uname.value + " ?? " + password.value + " ?? " + forestid.value)
                 uname.value = ''
-                pw.value = ''
+                password.value = ''
                 forestid.value = ''
                 event.preventDefault()
             }
         </script>
+    """ + footer + """
     </body>
 </html>
 """
@@ -200,11 +240,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text(msg)
                 continue
             try:
-                result, code = prepare_pipeline(
-                        uname=uname,
-                        password=password,
-                        real_estate_ids=real_estate_ids,
-                    )
+                result = prepare_pipeline(
+                    uname=uname,
+                    real_estate_ids=real_estate_ids,
+                )
             except Exception as e:
                 print(f"Exception: {e}")
             await websocket.send_text(result)
