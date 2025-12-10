@@ -28,6 +28,6 @@ cd .. #UTOPIA
 
 # Initialize the database.
 # TESTING: for e.g. docker deployment, use .env files
-python pipeline/utopia_db_init.py
+# python pipeline/utopia_db_init.py
 # TESTING: DESDEO's run_fullstack uses DESDEO/desdeo/api's test.db, so make that a hard link to this folder's test.db
-ln -f test.db DESDEO/desdeo/api/test.db
+# ln -f test.db DESDEO/desdeo/api/test.db

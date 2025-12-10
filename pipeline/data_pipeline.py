@@ -817,7 +817,7 @@ def run_pipeline(ids, target_dir, name, api_key_dir):
     session = next(get_session())
 
     # Create the utopia problem.
-    problem_name = f"Utopia-problem: {", ".join(ids)}"
+    problem_name = f"Utopia-problem: {" ".join(ids)}"
     print("Creating the MOO problem...")
     problem, key = utopia_problem(
         data_dir=f"{target_dir}/{name}",
