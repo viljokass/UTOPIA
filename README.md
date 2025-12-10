@@ -79,6 +79,7 @@ If you want to use, say, PostgreSQL with external database (such as pukki) you m
 * DB_USER
 * DB_NAME
 * DB_PASSWORD
+
 All of course corresponding to what the database service provider expects.
 
 ## Operation
@@ -87,4 +88,4 @@ To start the system, activate the UTOPIA-venv and either:
 * (preferred?) start the API: ```uvicorn --app-dir pipeline app:app --reload --port [PORT]```
     * After starting the API, open web browser to localhost:[PORT] and an simple interface for adding problems should open.
     * Follow the instructions there to add a problem to the database.
-
+* Currently the best way to use this is to let this tool handle the creation of the problem, and then use a separate DESDEO instance (not the one in this folder) to optimize the problem.
