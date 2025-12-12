@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# Init the submodules, DESDEO and metsi. UPDATE MANUALLY!
-git submodule init && git submodule update
 # Create the combined virtual environment for the system
-python3.12 -m venv UTOPIA-venv
+python3.12 -m venv /opt/UTOPIA-venv
 # Activate the virtual environment
-source UTOPIA-venv/bin/activate
+source /opt/UTOPIA-venv/bin/activate
 
 # Install poetry for DESDEO installation
 pip install poetry
@@ -26,8 +24,5 @@ cd DESDEO #UTOPIA/DESDEO
 poetry install -E web
 cd .. #UTOPIA
 
-# Initialize the database.
-# TESTING: for e.g. docker deployment, use .env files
-# python pipeline/utopia_db_init.py
-# TESTING: DESDEO's run_fullstack uses DESDEO/desdeo/api's test.db, so make that a hard link to this folder's test.db
-# ln -f test.db DESDEO/desdeo/api/test.db
+# Install rest (websockets, etc)
+pip install uvicorn[standard]

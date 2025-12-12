@@ -11,7 +11,10 @@ The system requires:
 * Python 3.12
 * (linux) Python 3 development tools
 * A valid Maanmittauslaitos API-key (https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje)
-* (PostgreSQL)
+    * The web runner expects it to be in the parent folder of this folder, (./UTOPIA/../apikey.txt, without newline at the end.)
+    * The web runner will also create a folder named "output" in the parent folder as well.
+* A gurobi licence
+* For local run DESDEO backend uses SQLite, for running in something like rahti, it uses PostgreSQL.
 
 ## Structure
 The system has three main components:
@@ -19,7 +22,7 @@ The system has three main components:
 * Metsi (git submodule)
 * The data pipeline code
 
-DESDEO is used to handle the multi-objective optimization aspect of this system. It has documentation in its repository or at (https://desdeo.readthedocs.io/en/latest/)
+DESDEO is used to handle the multi-objective optimization aspect of this system. It has documentation in its repository or at (https://desdeo.readthedocs.io/en/latest/) Current version this project is connected with is an older version of DESDEO, but it does produce multiobjective optimization problems that are compatible with the newest version found in the master branch (as of 11.12.2025).
 
 Metsi is used to simulate the data for the multiobjective optimization problem based on the data produced by the data pipeline code. It has documentation in its repository.
 
@@ -58,26 +61,31 @@ The script returns a DESDEO problem object and the treatment key associated with
 
 ### Solving the multiobjective optimization problem
 
-After the forest problem and all associated information is in the database, the problem can then be optimized using NIMBUS web-UI, which is implemented into DESDEO. NIMBUS is an interactive, classification based multiobjective optimization method. In it, the forest owner takes part in an iterative solving process. The forest owner can classify the above four objectives. That classification is then used to find new solutions for the forest owner to further explore and decide upon. After a satisfacotry plan is found, they can choose it and end the optimization process.
+After the forest problem and all associated information is in the database, the problem can then be optimized using NIMBUS web-UI, which is implemented into DESDEO. NIMBUS is an interactive, classification based multiobjective optimization method. In it, the forest owner takes part in an iterative solving process. The forest owner can classify the above four objectives. That classification is then used to find new solutions for the forest owner to further explore and decide upon. After a satisfactory plan is found, they can choose it and end the optimization process.
 
 ## Setup
-Running setup.sh should take care of setting up the system. The script creates a Python 3.12 virtual environment (UTOPIA-venv) and installs both Metsi and DESDEO into it. Then it initializes the database used to store DESDEO created optimization problems and other relevant information, such as the map of the forest.
+Running setup.sh should take care of setting up the system. The script creates a Python 3.12 virtual environment (UTOPIA-venv) and installs both Metsi and DESDEO into it. To use the newest version of DESDEO straight from the master branch, one must utilize a separate DESDEO instance and the database object (default test.db in desdeo/api folder) created by the initialization scripts there. This can be done by making a HARD LINK named test.db of the database in this root folder that corresponds to the test.db in the newest installation of DESDEO.
 
-NOTE: Current version of DESDEO uses PostgreSQL. If setting up complains about not beign able to access the databse or something, remember set environment variables, such as POSTGRES_PASSWORD to access the database.
+Basically: ii/jj/UTOPIA/test.db --> xx/yy/DESDEO/desdeo/api/test.db
+                        (hard link)                         (actual db object)
+
+This can be done with the "ln" tool on Linux.
+
+To use this setup, you can just create the HARD LINK and be done with it.
+
+If you want to use, say, PostgreSQL with external database (such as pukki) you must configure and set the following fields to the environment.
+* DB_HOST
+* DB_PORT
+* DB_USER
+* DB_NAME
+* DB_PASSWORD
+
+All of course corresponding to what the database service provider expects.
 
 ## Operation
-To start the system, activate the UTOPIA-venv and either 
+To start the system, activate the UTOPIA-venv and either:
 * run python pipeline/data_pipeline.py (follow its instructions) or 
-* start the API: ```uvicorn --app-dir pipeline app:app --reload --port [PORT]```
-    * After starting the API, move to localhost:[PORT] and an simple interface for adding problems should open.
-
-* For optimizing the problem with NIMBUS web-UI, the DESDEO web API and web UI must be running too.
-    * With UTOPIA-venv activated, go to UTOPIA/DESDEO/desdeo/api and run ```uvicron app:app --reload``` to start the DESDEO web api.
-    * Also, DESDEO's web ui is needed. See https://github.com/industrial-optimization-group/desdeo-webui/tree/UTOPIA for the UI.
-    * NOTE: TO BE CHANGED IN THE FUTURE WHEN MIGRATING TO NEW WEB API AND WEB UI!
-
-The system creates files into the given output folder. After the pipeline has run its course and the forest problem is in the database, these files can be safely deleted.
-
-## TODO
-Also, after the pipeline has created the MOO problem, remove the user data from the output folder to save space.
-
+* (preferred?) start the API: ```uvicorn --app-dir pipeline app:app --reload --port [PORT]```
+    * After starting the API, open web browser to localhost:[PORT] and an simple interface for adding problems should open.
+    * Follow the instructions there to add a problem to the database.
+* Currently the best way to use this is to let this tool handle the creation of the problem, and then use a separate DESDEO instance (not the one in this folder) to optimize the problem.

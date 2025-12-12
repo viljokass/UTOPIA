@@ -6,11 +6,8 @@ import numpy as np
 import polars as pl
 
 from desdeo.problem.schema import (
-    Constant,
     Constraint,
     ConstraintTypeEnum,
-    DiscreteRepresentation,
-    ExtraFunction,
     Objective,
     ObjectiveTypeEnum,
     Problem,
@@ -345,16 +342,19 @@ def utopia_problem(
         )
         constants.append(c20)
 
+    """
     if Path(f"{data_dir}/dec_vars.json").is_file():
         with Path.open(f"{data_dir}/dec_vars.json", "r") as f:
             CO2_baseline = json.load(f)  # noqa: N806
     else:
         CO2_baseline = None  # noqa: N806
+    """
 
     c1_func = []
     c2_func = []
     c3_func = []
     for i in range(np.shape(v_array)[0]):
+        """
         # if given a baseline (e.g., some previous solution's decision variables) basically maximize the difference
         if CO2_baseline is not None:
             # no lists allowed in the parser as such so we need to make the baseline into constants
@@ -372,9 +372,11 @@ def utopia_problem(
         # if no baseline given, use the beginning state's volumes
         else:
             print("Baseline for CO2 not found!")
-            c1_func.append(f"((C5_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*5")
-            c2_func.append(f"((C10_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*10")
-            c3_func.append(f"((C20_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*5")
+        """
+
+        c1_func.append(f"((C5_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*5")
+        c2_func.append(f"((C10_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*10")
+        c3_func.append(f"((C20_{i+1}@X_{i+1}) - (C0_{i+1}@X_{i+1}))*5")
 
     for i in range(1, 5):
         cvar = Variable(name=f"C_{i}", symbol=f"C_{i}", variable_type=VariableTypeEnum.real)
@@ -396,17 +398,6 @@ def utopia_problem(
     c3_func = "C_3 - " + " - ".join(c3_func)
     con = Constraint(
         name="c3_con", symbol="c3_con", cons_type=ConstraintTypeEnum.EQ, func=c3_func, is_twice_differentiable=True
-    )
-    constraints.append(con)
-
-    # Add a constraint stating that we cannot go below reference plan in carbon storage
-    co2_func = "- (C_1 + C_2 + C_3 + 1E-3)"
-    con = Constraint(
-        name="cmin_con",
-        symbol="cmin_con",
-        cons_type=ConstraintTypeEnum.LTE,
-        func=co2_func,
-        is_twice_differentiable=True,
     )
     constraints.append(con)
 
@@ -490,8 +481,8 @@ def utopia_problem(
     print(nadirs)
 
     f_1 = Objective(
-        name="Nettonykyarvo / €",
-        symbol="nettonykyarvo",
+        name="Net present value / €",
+        symbol="net_present_value",
         func=f_1_func,
         maximize=True,
         ideal=math.ceil(ideals["f_1"]),
@@ -503,8 +494,8 @@ def utopia_problem(
     )
 
     f_2 = Objective(
-        name=f"Puuston tilavuus / m^3\n(alussa {wood_volume_0}m^3)",
-        symbol="puuston_tilavuus",
+        name=f"Final timber volume / m^3\n(start {wood_volume_0}m^3)",
+        symbol="timber_volume",
         func=f_2_func,
         maximize=True,
         ideal=math.ceil(ideals["f_2"]),
@@ -516,8 +507,8 @@ def utopia_problem(
     )
 
     f_3 = Objective(
-        name="Hakkuiden tuotto / €",
-        symbol="hakkuutuotto",
+        name="Logging revenue / €",
+        symbol="logging_revenue",
         func=f_3_func,
         maximize=True,
         ideal=math.ceil(ideals["f_3"]),
@@ -529,12 +520,12 @@ def utopia_problem(
     )
 
     f_4 = Objective(
-        name="Sidottu hiilidioksidi / (v·t)",
-        symbol="sidottu_hiilidioksidi",
+        name="Stored CO2 / (year·tonne)",
+        symbol="stored_co2",
         func=f_4_func,
         maximize=True,
         ideal=math.ceil(ideals["f_4"]),
-        nadir=0.0,
+        nadir=math.floor(nadirs["f_4"]),
         objective_type=ObjectiveTypeEnum.analytical,
         is_linear=True,
         is_convex=False,  # not checked

@@ -35,19 +35,11 @@ if __name__ == "__main__":
                 username=ServerDebugConfig.test_user_analyst_name,
                 password_hash=get_password_hash(ServerDebugConfig.test_user_analyst_password),
                 role=UserRole.analyst,
-                group="test",
+                group="",
             )
             session.add(user_analyst)
             session.commit()
             session.refresh(user_analyst)
-
-            for problem in problems:
-                problem_db = ProblemDB.from_problem(problem, user_analyst)
-
-                session.add(problem_db)
-
-            session.commit()
-            session.refresh(problem_db)
 
     else:
         # deployment stuff
