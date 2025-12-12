@@ -11,9 +11,9 @@ The system requires:
 * Python 3.12
 * (linux) Python 3 development tools
 * A valid Maanmittauslaitos API-key (https://www.maanmittauslaitos.fi/en/rajapinnat/api-avaimen-ohje)
-    * The web runner expects it to be in the parent folder of this folder, (./UTOPIA/../apikey.txt, without newline at the end.)
+    * The web runner expects it to be in the parent folder of this folder, (./UTOPIA/../apikey.txt, without newline at the end.) These can be configured using environment variables, though.
     * The web runner will also create a folder named "output" in the parent folder as well.
-* A gurobi licence
+* A gurobi licence (can be configured using environment variables)
 * For local run DESDEO backend uses SQLite, for running in something like rahti, it uses PostgreSQL.
 
 ## Structure
@@ -81,6 +81,14 @@ If you want to use, say, PostgreSQL with external database (such as pukki) you m
 * DB_PASSWORD
 
 All of course corresponding to what the database service provider expects.
+
+Other environment variables are:
+* APIKEY_PATH, which tells the location of the Maanmittauslaitos API key. Also, in case of running things in rahti, the API key itself has to be mounted to the location this variable points to.
+* GRB_LICENCE_FILE, which tells the location of the Gurobi licence file. As with above, the licence file has to be mounted to the location that this variable points to. See Gurobi's website for more info on the licences themselves.
+* WSS (set to 1) is this exists, the system uses the wss protocol instead of ws protocol. Similar to the case with http and https.
+* WS_ADDRESS, tells the address that the "UI" of the optimization system will try to connect to. Essentially the address of the pod/container or localhost:[PORT]
+* WEB_CONCURRENCY, tells how many workers should the system run at the same time.
+* DESDEO_UI_URL, tells the address of DESDEO UI for easy access to DESDEO for optimization.
 
 ## Operation
 To start the system, activate the UTOPIA-venv and either:
