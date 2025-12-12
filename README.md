@@ -89,3 +89,6 @@ To start the system, activate the UTOPIA-venv and either:
     * After starting the API, open web browser to localhost:[PORT] and an simple interface for adding problems should open.
     * Follow the instructions there to add a problem to the database.
 * Currently the best way to use this is to let this tool handle the creation of the problem, and then use a separate DESDEO instance (not the one in this folder) to optimize the problem. That is how the system is run on rahti too. Basically the systems (DESDEO and this) are connected through the database only.
+
+## Rahti and Docker images
+This folder has a Dockerfile, which acts as a recipe for creating a Docker image. That Docker image can then be run or uploaded to different places. For exampe, it can be put in rahti's image stream (see https://docs.csc.fi/cloud/rahti/images/Using_Rahti_integrated_registry/ for details.) That image can then be used to create a container (or a pod) within rahti.
